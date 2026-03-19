@@ -68,7 +68,7 @@ def get_email(account: str, email_id: str) -> str:
 
 
 @mcp.tool()
-def send_email(account: str, to: str, subject: str, body: str) -> str:
+def send_email(account: str, to: str, subject: str, body: str, html: bool = False) -> str:
     """
     Send an email from a Gmail account.
 
@@ -76,15 +76,25 @@ def send_email(account: str, to: str, subject: str, body: str) -> str:
         account: Account name — "Personal" or "Freelance"
         to: Recipient email address
         subject: Email subject
-        body: Email body (plain text)
+        body: Email body (plain text or HTML)
+        html: If True, send as HTML email (default False)
     """
     import base64
     from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
 
     service = _get_service(account)
-    msg = MIMEText(body)
-    msg["To"] = to
-    msg["Subject"] = subject
+
+    if html:
+        msg = MIMEMultipart("alternative")
+        msg["To"] = to
+        msg["Subject"] = subject
+        msg.attach(MIMEText(body, "html"))
+    else:
+        msg = MIMEText(body)
+        msg["To"] = to
+        msg["Subject"] = subject
+
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
     service.users().messages().send(userId="me", body={"raw": raw}).execute()
     return json.dumps({"status": "sent", "to": to, "subject": subject})
